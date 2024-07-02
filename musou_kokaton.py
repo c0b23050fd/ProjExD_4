@@ -194,6 +194,20 @@ class Explosion(pg.sprite.Sprite):
         if self.life < 0:
             self.kill()
 
+class Gravity(pg.sprite.Sprite):
+    def __init__(self,life:int):
+        super().__init__()
+
+        self.image = pg.Surface((WIDTH,HEIGHT))
+        self.life = life
+        pg.draw.rect(self.image,(0,0,0),pg.Rect(0,0,WIDTH,HEIGHT))
+        self.rect = self.image.get_rect()
+        self.image.set_alpha(180)
+
+    def update(self):
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
 
 class Enemy(pg.sprite.Sprite):
     """
@@ -253,7 +267,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
-
+    grav = pg.sprite.Group()
     tmr = 0
     clock = pg.time.Clock()
     while True:
@@ -263,11 +277,17 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+
+            if  key_lst[pg.K_RETURN] and score.value >= 200:
+                    grav.add(Gravity(400))
+                    score.value -= 200
+
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
             emys.add(Enemy())
 
+        
         for emy in emys:
             if emy.state == "stop" and tmr%emy.interval == 0:
                 # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
@@ -282,6 +302,12 @@ def main():
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
 
+        for bomb in pg.sprite.groupcollide(bombs, grav, True, False).keys():
+            exps.add(Explosion(bomb,50))
+
+        for emy in pg.sprite.groupcollide(emys, grav, True, False).keys():
+            exps.add(Explosion(emy,100))
+
         if len(pg.sprite.spritecollide(bird, bombs, True)) != 0:
             bird.change_img(8, screen) # こうかとん悲しみエフェクト
             score.update(screen)
@@ -289,6 +315,8 @@ def main():
             time.sleep(2)
             return
 
+        grav.update()
+        grav.draw(screen)
         bird.update(key_lst, screen)
         beams.update()
         beams.draw(screen)
